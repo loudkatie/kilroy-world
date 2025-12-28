@@ -20,7 +20,7 @@ const KilroyContext = createContext<KilroyContextType | null>(null);
 
 export function KilroyProvider({ children }: { children: ReactNode }) {
   const [place, setPlace] = useState<Place | null>(null);
-  const [circle, setCircle] = useState<Circle>('community');
+  const [circle, setCircle] = useState<Circle>('world');
   const [isVerifiedHuman, setIsVerifiedHuman] = useState(false);
   const [locationDenied, setLocationDenied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

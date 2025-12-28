@@ -1,4 +1,4 @@
-export type Circle = 'community' | 'verified';
+export type Circle = 'world' | 'verified';
 
 export interface Place {
   place_id: string;

@@ -12,8 +12,8 @@ Kilroy lets people leave an image + short caption at a real place. Others who ph
 
 Two visibility layers at the same place:
 
-- **Community**: Any World App user can see (anonymous)
-- **Verified**: Only World ID-verified humans can see
+- **World**: Any World App user can see (anonymous)
+- **Verified**: Only World ID-verified humans can see (toggle visible only after verification)
 
 No profiles. No usernames. No likes. No comments. No edits.
 
@@ -82,7 +82,7 @@ places/
       {kilroy_id}/
         image_url: string
         caption: string
-        circle: "community" | "verified"
+        circle: "world" | "verified"
         created_at: timestamp
 ```
 
@@ -106,7 +106,7 @@ Create a composite index on `kilroys`:
     /drop
       page.tsx      # Create new kilroy
   /components
-    /CircleToggle   # Community/Verified toggle
+    /CircleToggle   # World/Verified toggle
     /PageLayout     # Consistent page structure
   /context
     KilroyContext   # App state (place, circle, verification)

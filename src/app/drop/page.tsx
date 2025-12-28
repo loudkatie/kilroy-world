@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { useKilroy } from '@/context/KilroyContext';
 import { createKilroy } from '@/lib/kilroys';
 import { compressImage } from '@/lib/image';
@@ -15,15 +14,15 @@ const MAX_CAPTION_LENGTH = 200;
 
 export default function DropKilroy() {
   const router = useRouter();
-  const { place, isVerifiedHuman, setIsVerifiedHuman } = useKilroy();
+  const { place, isVerifiedHuman } = useKilroy();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
-  const [circle, setCircle] = useState<Circle>('community');
+  // Non-verified users can only post to 'world'
+  const [circle, setCircle] = useState<Circle>('world');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -32,7 +31,7 @@ export default function DropKilroy() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+      setError('Please select an image');
       return;
     }
 
@@ -48,41 +47,15 @@ export default function DropKilroy() {
     }
   }
 
-  async function handleVerify() {
-    if (!MiniKit.isInstalled()) {
-      setIsVerifiedHuman(true);
-      setCircle('verified');
-      return;
-    }
-
-    setIsVerifying(true);
-    try {
-      const result = await MiniKit.commandsAsync.verify({
-        action: 'kilroy-verify',
-        verification_level: VerificationLevel.Orb,
-      });
-
-      if (result.finalPayload.status === 'success') {
-        setIsVerifiedHuman(true);
-        setCircle('verified');
-      }
-    } catch (err) {
-      console.error('Verification error:', err);
-    } finally {
-      setIsVerifying(false);
-    }
-  }
-
   function handleCircleChange(value: Circle) {
-    if (value === 'verified' && !isVerifiedHuman) {
-      handleVerify();
-    } else {
-      setCircle(value);
-    }
+    setCircle(value);
   }
 
   async function handleSubmit() {
     if (!place || !selectedImage) return;
+
+    // Enforce: non-verified users can only post to 'world'
+    const finalCircle = isVerifiedHuman ? circle : 'world';
 
     setIsSubmitting(true);
     setError(null);
@@ -92,7 +65,7 @@ export default function DropKilroy() {
       const compressedBlob = await compressImage(selectedImage);
 
       // Upload and create kilroy
-      await createKilroy(place, compressedBlob, caption, circle);
+      await createKilroy(place, compressedBlob, caption, finalCircle);
 
       // Navigate back to view
       router.push('/view');
@@ -179,20 +152,22 @@ export default function DropKilroy() {
           </p>
         </div>
 
-        {/* Circle selector */}
-        <div>
-          <p className="text-sm text-gray-600 mb-2">Who can see this?</p>
-          <CircleToggle
-            value={circle}
-            onChange={handleCircleChange}
-            disabled={isSubmitting || isVerifying}
-          />
-          <p className="text-xs text-gray-400 mt-2">
-            {circle === 'community'
-              ? 'Visible to all World App users'
-              : 'Only visible to World ID verified humans'}
-          </p>
-        </div>
+        {/* Circle selector - only show if verified */}
+        {isVerifiedHuman && (
+          <div>
+            <p className="text-sm text-gray-600 mb-2">Who can see this?</p>
+            <CircleToggle
+              value={circle}
+              onChange={handleCircleChange}
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-gray-400 mt-2">
+              {circle === 'world'
+                ? 'Visible to all World App users'
+                : 'Only visible to verified humans'}
+            </p>
+          </div>
+        )}
 
         {error && (
           <p className="text-red-500 text-sm text-center">{error}</p>

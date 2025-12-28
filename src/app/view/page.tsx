@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { useKilroy } from '@/context/KilroyContext';
 import { getKilroys } from '@/lib/kilroys';
 import { Kilroy, Circle } from '@/lib/types';
@@ -12,10 +11,9 @@ import { Button, Spinner } from '@worldcoin/mini-apps-ui-kit-react';
 
 export default function ViewKilroys() {
   const router = useRouter();
-  const { place, circle, setCircle, isVerifiedHuman, setIsVerifiedHuman } = useKilroy();
+  const { place, circle, setCircle, isVerifiedHuman } = useKilroy();
   const [kilroys, setKilroys] = useState<Kilroy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     if (!place) {
@@ -30,8 +28,9 @@ export default function ViewKilroys() {
 
     setIsLoading(true);
     try {
-      // If viewing verified circle, only show if user is verified
-      const filterCircle = circle === 'verified' && isVerifiedHuman ? 'verified' : 'community';
+      // Non-verified users only see 'world' kilroys
+      // Verified users see based on their circle selection
+      const filterCircle = isVerifiedHuman ? circle : 'world';
       const data = await getKilroys(place.place_id, filterCircle);
       setKilroys(data);
     } catch (err) {
@@ -41,38 +40,8 @@ export default function ViewKilroys() {
     }
   }
 
-  async function handleVerify() {
-    if (!MiniKit.isInstalled()) {
-      // For testing outside World App
-      setIsVerifiedHuman(true);
-      setCircle('verified');
-      return;
-    }
-
-    setIsVerifying(true);
-    try {
-      const result = await MiniKit.commandsAsync.verify({
-        action: 'kilroy-verify',
-        verification_level: VerificationLevel.Orb,
-      });
-
-      if (result.finalPayload.status === 'success') {
-        setIsVerifiedHuman(true);
-        setCircle('verified');
-      }
-    } catch (err) {
-      console.error('Verification error:', err);
-    } finally {
-      setIsVerifying(false);
-    }
-  }
-
   function handleCircleChange(value: Circle) {
-    if (value === 'verified' && !isVerifiedHuman) {
-      handleVerify();
-    } else {
-      setCircle(value);
-    }
+    setCircle(value);
   }
 
   function formatTime(timestamp: number): string {
@@ -113,13 +82,15 @@ export default function ViewKilroys() {
           {place.place_name}
         </p>
 
-        <div className="mt-4">
-          <CircleToggle
-            value={circle}
-            onChange={handleCircleChange}
-            disabled={isVerifying}
-          />
-        </div>
+        {/* Only show toggle if user is verified */}
+        {isVerifiedHuman && (
+          <div className="mt-4">
+            <CircleToggle
+              value={circle}
+              onChange={handleCircleChange}
+            />
+          </div>
+        )}
       </Page.Header>
 
       <Page.Main className="flex flex-col gap-4">
